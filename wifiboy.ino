@@ -31,6 +31,9 @@ int enemyNo;                    //敵人編號
 int status = 0;                 //玩家形狀變化
 int sceneStatus = 0;            //畫面狀態
 int toturialStatus = 0;         //教學畫面切換
+int RpressOnce = 0;             //R是否按一次
+int LpressOnce = 0;             //L是否按一次
+int BpressOnce = 0;             //B是否按一次
 
 void blit_str256(const char *str, int x, int y)
 {
@@ -110,6 +113,14 @@ void loop()
     SceneCtrl();
 
     wbpro_blit8();
+}
+
+void DrawRoad()
+{
+    for(int i = 0; i < 240; i++)
+    {
+        wbpro_setBuf8(i+230*240, wbWHITE);
+    }
 }
 
 void ActControl()
@@ -360,6 +371,8 @@ void Clean()
         enemyX[i] = 300;
         randomEnemy[i] = random(0, 3);
     }
+    masterX = beginX;
+    masterY = beginY;
     delay(300);
     sceneStatus++;
 }
@@ -371,16 +384,23 @@ void SceneCtrl()
 
     //開始畫面
     case 0:
+        if (digitalRead(34) == 1)           //判斷B放開
+        {
+            BpressOnce = 0;
+        }
         if(digitalRead(0) == 0)
         {
             sceneStatus = 1;
         }
-        else if(digitalRead(34) == 0)
-        {
+        else if(digitalRead(34) == 0 && BpressOnce == 0)
+        {   
+            BpressOnce = 1;
             toturialStatus = 0;
             sceneStatus = 3;
         }
         score = 0;
+        masterX = beginX;
+        masterY = beginY;
         blit_str256("JUMP GAME !", 75, 80);
         blit_str256("PRESS \"START\" TO PLAY", 35, 200);
         blit_str256("TOTURIAL (B)",10 ,300);
@@ -401,10 +421,7 @@ void SceneCtrl()
 
     //遊戲中
     case 1:
-        for(int i = 0; i < 240; i++)
-        {
-            wbpro_setBuf8(i+230*240, wbWHITE);
-        }
+        DrawRoad();
         blit_str256("SCORE", 0, 0);
         blit_num256(score, 40, 0, 1);
         //設定速度
@@ -438,7 +455,6 @@ void SceneCtrl()
         
             case 1:
                 wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_jump);
-                // blit_str256("TOUCH", 100, 100);
                 break;
 
             case 2:
@@ -449,13 +465,18 @@ void SceneCtrl()
 
     //結束畫面
     case 2:
+        if (digitalRead(34) == 1)           //判斷B放開
+        {
+            BpressOnce = 0;
+        }
         if(digitalRead(35) == 0)
         {
             score = 0;
             sceneStatus = 1;
         }
-        else if(digitalRead(34) == 0)
+        else if(digitalRead(34) == 0 && BpressOnce == 0)
         {
+            BpressOnce = 1;
             startX = -40;
             sceneStatus = 0;
         }
@@ -468,19 +489,62 @@ void SceneCtrl()
     
     //教學頁面
     case 3:
-        if(digitalRead(35) == 0)
+        if (digitalRead(34) == 1)           //判斷B放開
         {
+            BpressOnce = 0;
+        }
+        if(digitalRead(34) == 0 && BpressOnce == 0)
+        {
+            BpressOnce = 1;
             sceneStatus = 0;
         }
-        blit_str256("HOME (A)", 10, 10);
+        DrawRoad();
+        blit_str256("HOME (B)", 10, 10);
         switch (toturialStatus)
         {
 
         //向上教學   
         case 0:
-            if(digitalRead(32) == 0)
+            if(digitalRead(33) == 1)            //判斷L放開
             {
+                LpressOnce = 0;
+            }
+            if(digitalRead(32) == 0 && RpressOnce == 0)
+            {
+                RpressOnce = 1;
                 toturialStatus = 1;
+            }
+            //跳躍教學實際操作
+            if(digitalRead(36) == 0)
+            {   
+                jumpIsPressed = true;
+            }
+            else if(digitalRead(36) == 1 && jumpIsPressed == false)
+            {
+                masterY = beginY;
+                wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_walk);
+            }
+            //上升階段
+            if(jumpIsPressed)
+            {
+                wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_jump);
+                if(masterY >= maxHeight && up)
+                {
+                    masterY -= 8;
+                }
+                //下降階段
+                else
+                {   
+                    up=false;
+                    masterY += 8;
+                }
+                //落地
+                if(masterY >= beginY)
+                {
+                    masterY = beginY;
+                    jumpIsPressed = false;
+                    up=true;
+                }
             }
             blit_str256("1. PRESS U TO JUMP", 35, 60);
             blit_str256("NEXT (R)", 155, 300);
@@ -488,13 +552,40 @@ void SceneCtrl()
         
         //向下教學
         case 1:
-            if(digitalRead(32) == 0)
+            if(digitalRead(32) == 1)            //判斷R放開
             {
+                RpressOnce = 0;
+            }
+            if(digitalRead(33) == 1)            //判斷L放開
+            {
+                LpressOnce = 0;
+            }
+            if(digitalRead(32) == 0 && RpressOnce == 0)
+            {
+                RpressOnce = 1;
                 toturialStatus = 2;
             }
-            if(digitalRead(33) == 0)
+            if(digitalRead(33) == 0 && LpressOnce == 0)
             {
+                LpressOnce = 1;
                 toturialStatus = 0;
+            }
+            //蹲低教學實際操作
+            if(digitalRead(39) == 0)
+            {
+                if(masterY+23 <= beginY+32)
+                {
+                    masterY += 10;
+                }
+                else 
+                {
+                    wbpro_blitBuf8(0, 9, 32, masterX, masterY, 32, 23, (uint8_t *) s_down);
+                }
+            }
+            else
+            {
+                masterY = beginY;
+                wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_walk);
             }
             blit_str256("2. PRESS D TO SQUAT DOWN", 10, 60);
             blit_str256("BACK (L)", 10, 300);
@@ -503,9 +594,33 @@ void SceneCtrl()
 
         //開火教學
         case 2:
-            if(digitalRead(33) == 0)
+            if(digitalRead(32) == 1)            //判斷R放開
             {
+                RpressOnce = 0;
+            }
+            if(digitalRead(33) == 0 && LpressOnce == 0)
+            {
+                LpressOnce = 1;
                 toturialStatus = 1;
+            }
+            //開火教學實際操作
+            Shoot();
+            DrawFire();
+            if(digitalRead(35) == 0)
+            {
+                isFire = true;
+            }
+            else
+            {
+                isFire = false;
+            }
+            if (isFire)
+            {
+                wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_idle);
+            }
+            else
+            {
+                wbpro_blitBuf8(0, 0, 32, masterX, masterY, 32, 32, (uint8_t *) s_walk);
             }
             blit_str256("3. PRESS A TO FIRE", 35, 60);
             blit_str256("BACK (L)", 10, 300);
