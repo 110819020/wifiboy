@@ -3,8 +3,22 @@
 #include <esp32-hal.h>
 #include "wb-sprite.h"
 
+void ActControl();
+void MoveUpdate();
+void Shoot();
+void DrawFire();
+void InitEnemy();
+void Collider();
+void ShootEnemy();
+void Clean();
+void SceneCtrl();
+
+int bgX[2] = {0, 240};          //背景1X軸
+int cloudX = 240;               //雲X軸
+int cloudY = 0;                 //雲Y軸
+int cloudSpeed = 4;             //雲速度
 int score = 0;                  //分數
-int startX = -40;                 //開始畫面動畫X軸
+int startX = -40;               //開始畫面動畫X軸
 int masterX = 25;               //玩家X軸
 int masterY = 200;              //玩家Y軸
 const int beginX = 25;          //玩家基準X軸
@@ -22,7 +36,7 @@ int bulletStatus[5];            //子彈狀態(設定、顯示、初始)
 int bulletX[5];                 //子彈X軸
 int bulletY[5];                 //子彈Y軸
 unsigned long enemySpawnCD;     //敵人生成冷卻
-int enemySpeed = 7;       //敵人相對移動速度
+int enemySpeed = 7;             //敵人相對移動速度
 int enemyX[5];                  //敵人X軸
 int enemyY[3] = {172, 216, 168};//敵人Y軸(空中、地上、大型)
 bool enemyAlive[5];             //敵人是否存活
@@ -79,12 +93,7 @@ void setup()
     {
         wbpro_setPal8(i, wbpro_color565(standardColour[i][0], standardColour[i][1], standardColour[i][2]));
     }
-    // for(int i = 0; i < 100; i++)
-    // {
-    //     StarX[i] = random(0, 240);
-    //     StarY[i] = random(0, 320);
-    //     StarSpeed[i] = random(2, 5);
-    // }
+    cloudY = random(0, 100);
     pinMode(0, INPUT);
     pinMode(32, INPUT);
     pinMode(33, INPUT);
@@ -421,17 +430,41 @@ void SceneCtrl()
 
     //遊戲中
     case 1:
-        DrawRoad();
+        wbpro_blitBuf8(0, 0, 240, bgX[0], 0, 240, 320, (uint8_t *) bg1);
+        wbpro_blitBuf8(0, 0, 240, bgX[1], 0, 240, 320, (uint8_t *) bg1);
+        if(bgX[0] < bgX[1]){
+            bgX[0]-=enemySpeed;
+            bgX[1] = bgX[0]+240;
+        }
+        else
+        {
+            bgX[1] -= enemySpeed;
+            bgX[0] = bgX[1]+240;
+        }
+        for(int i = 0; i < 2; i++)
+        {
+            if(bgX[i] <= -240)  bgX[i] = 240;
+        }
+        wbpro_blitBuf8(0, 0, 240, cloudX, cloudY, 240, 70, (uint8_t *) cloud);
         blit_str256("SCORE", 0, 0);
         blit_num256(score, 40, 0, 1);
         //設定速度
-        if(score >= 90) enemySpeed = 13;
+        if(score >= 100) enemySpeed = 14;
+        else if(score >= 90) enemySpeed = 13;
         else if(score >= 70) enemySpeed = 12;
         else if(score >= 55) enemySpeed = 11;
         else if(score >= 40) enemySpeed = 10;
         else if(score >= 25) enemySpeed = 9;
         else if(score >= 10) enemySpeed = 8;
         else enemySpeed = 7;
+
+        cloudSpeed = enemySpeed - 3;
+        cloudX -= cloudSpeed;
+        if(cloudX <= -300)
+        {
+            cloudX = 240;
+            cloudY = random(0, 100);
+        }
         ActControl();
         MoveUpdate();
         DrawFire();
@@ -461,6 +494,7 @@ void SceneCtrl()
                 wbpro_blitBuf8(0, 9, 32, masterX, masterY, 32, 23, (uint8_t *) s_down);
                 break;
         }
+        
         break;
 
     //結束畫面
