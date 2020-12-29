@@ -12,6 +12,8 @@ void Collider();
 void ShootEnemy();
 void Clean();
 void SceneCtrl();
+void LEDCtrl();
+void GLEDCtrl();
 
 int bgX[2] = {0, 240};          //背景1X軸
 int cloudX = 240;               //雲X軸
@@ -48,6 +50,10 @@ int toturialStatus = 0;         //教學畫面切換
 int RpressOnce = 0;             //R是否按一次
 int LpressOnce = 0;             //L是否按一次
 int BpressOnce = 0;             //B是否按一次
+bool RLed = false;              //紅LED控制
+unsigned long LedCd;            //紅LED維持時間
+bool GLed = false;              //綠LED控制
+unsigned long GLedCd;           //綠LED維持時間
 
 void blit_str256(const char *str, int x, int y)
 {
@@ -101,7 +107,8 @@ void setup()
     pinMode(35, INPUT);
     pinMode(36, INPUT);
     pinMode(39, INPUT);
-    pinMode(16, OUTPUT);
+    pinMode(26, OUTPUT);
+    pinMode(25, OUTPUT);
     //初始敵人類型
     for(int i = 0; i < 3; i++)
     {
@@ -298,6 +305,7 @@ void InitEnemy()
 
             if(enemyX[i] <= -32)
             {
+                GLed = true;
                 score++;
                 enemyX[i] = 300;
                 randomEnemy[i] = random(0, 3);
@@ -353,6 +361,7 @@ void ShootEnemy()
                 if(((bulletX[j] >= enemyX[i] && bulletX[j] <= enemyX[i] + 64)||(bulletX[j] + 32 >= enemyX[i] && bulletX[j]+ 32 <= enemyX[i] + 64)) && ((bulletY[j] >= enemyY[2] && bulletY[j] <= enemyY[2] + 64)||(bulletY[j] + 32 >= enemyY[2] && bulletY[j] + 32 <= enemyY[2] + 64)))
                 {
                     score++;
+                    RLed = true;
                     digitalWrite(16, HIGH);
                     enemyAlive[i] = false;
                     bulletStatus[j] = 2;
@@ -471,6 +480,8 @@ void SceneCtrl()
         InitEnemy();
         Collider();
         ShootEnemy();
+        LEDCtrl();
+        GLEDCtrl();
         //改變形狀
         switch (status)
         {
@@ -662,3 +673,48 @@ void SceneCtrl()
         }
     }
 }
+
+void LEDCtrl()
+{
+    if(RLed)
+    {
+        if(currentTime >= LedCd)
+        {
+            RLed = false;
+        }
+        else
+        {
+            digitalWrite(26, HIGH);
+        }
+        
+    }
+    else
+    {
+        digitalWrite(26, LOW);
+        LedCd = currentTime + 500;
+    }
+    
+}
+
+void GLEDCtrl()
+{
+    if(GLed)
+    {
+        if(currentTime >= GLedCd)
+        {
+            GLed = false;
+        }
+        else
+        {
+            digitalWrite(25, HIGH);
+        }
+        
+    }
+    else
+    {
+        digitalWrite(25, LOW);
+        GLedCd = currentTime + 500;
+    }
+    
+}
+
